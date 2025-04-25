@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Carecast.ai</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f7fa; padding: 20px; }
+    h2 { text-align: center; }
+    #chat { background: white; border-radius: 10px; max-width: 600px; margin: auto; padding: 20px; box-shadow: 0 0 8px rgba(0,0,0,0.1); height: 400px; overflow-y: auto; }
+    input, button { font-size: 16px; padding: 10px; margin-top: 10px; width: 100%; }
+    button { background-color: #007bff; color: white; border: none; cursor: pointer; }
+    button:hover { background-color: #0056b3; }
+    p { margin: 8px 0; }
+  </style>
+</head>
+<body>
+  <h2>Carecast.ai</h2>
+  <div id="chat"></div>
+  <input id="msg" placeholder="Describe your symptoms..." />
+  <button onclick="send()">Send</button>
+  <script>
+    const sid = Math.random().toString(36).substring(2);
+    const chat = document.getElementById("chat");
+    const input = document.getElementById("msg");
+
+    async function send() {
+      const text = input.value.trim();
+      if (!text) return;
+      chat.innerHTML += `<p><strong>You:</strong> ${text}</p>`;
+      input.value = "";
+      const res = await fetch('/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sid, message: text })
+      });
+      const data = await res.json();
+      chat.innerHTML += `<p><strong>Doctor AI:</strong> ${data.message.replace(/\n/g, "<br>")}</p>`;
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    input.addEventListener("keypress", function(e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        send();
+      }
+    });
+  </script>
+</body>
+</html>
