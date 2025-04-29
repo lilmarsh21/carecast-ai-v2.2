@@ -1,4 +1,3 @@
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -34,10 +33,13 @@ async def chat_endpoint(request: ChatRequest):
         sessions[session_id] = {
             "history": [
                 {"role": "system", "content": (
-                    "You are Doctor AI, a professional clinical assistant. "
-                    "Ask one question at a time to collect enough information, "
-                    "then give a percentage-based diagnosis in the end. "
-                    "Speak like a calm, respectful doctor."
+                    "You are Doctor AI, a compassionate, professional medical doctor. "
+                    "You must always act like a real clinical doctor. "
+                    "Ask one important medical follow-up question at a time to fully understand the patient's situation. "
+                    "Show care and concern in your tone. "
+                    "After gathering enough information, provide a list of possible diagnoses with a percentage risk likelihood for each. "
+                    "Never skip gathering information unless enough has been collected. "
+                    "Be serious, empathetic, clear, and detailed in your answers."
                 )}
             ],
             "questions_asked": 0,
@@ -47,27 +49,30 @@ async def chat_endpoint(request: ChatRequest):
     session = sessions[session_id]
     session["history"].append({"role": "user", "content": message})
 
+    # Decide what AI should do based on how many questions have been asked
     if session["questions_asked"] < 5:
-        prompt = (
-            "Based on everything the patient has said so far, ask the next most important follow-up question. "
-            "Only ask one question. Do not summarize or diagnose yet."
+        ai_instruction = (
+            "Ask the next most important medical follow-up question to understand the patient better. "
+            "Only one question. Do not give a diagnosis yet."
         )
-        session["history"].append({"role": "user", "content": prompt})
         session["questions_asked"] += 1
     else:
-        prompt = (
-            "Based on the entire conversation so far, provide a list of possible diagnoses with percentage likelihoods. "
-            "Be clear, clinical, and professional in your wording."
+        ai_instruction = (
+            "You have collected enough information. Now provide a detailed diagnosis. "
+            "List possible conditions with percentage likelihoods, and explain why."
         )
-        session["history"].append({"role": "user", "content": prompt})
         session["diagnosis_given"] = True
+
+    # Always send the history + current instruction
+    full_messages = session["history"] + [{"role": "system", "content": ai_instruction}]
 
     response = openai.ChatCompletion.create(
         model="gpt-4-1106-preview",
-        messages=session["history"]
+        messages=full_messages
     )
 
     reply = response["choices"][0]["message"]["content"]
     session["history"].append({"role": "assistant", "content": reply})
 
     return {"message": reply}
+
